@@ -2,9 +2,17 @@ import spacy
 from bs4 import BeautifulSoup
 import time
 
-# Charger le modèle Spacy avec DBpedia Spotlight
-nlp = spacy.blank('en')
-nlp.add_pipe('dbpedia_spotlight')
+# Charger les modèles Spacy avec DBpedia Spotlight
+nlp_dbpedia_en = spacy.blank('en')
+nlp_dbpedia_en.add_pipe('dbpedia_spotlight')
+nlp_dbpedia_it = spacy.blank('it')
+nlp_dbpedia_it.add_pipe('dbpedia_spotlight')
+
+# Charger les modèles Spacy avec WikiData Spotlight
+nlp_wikidata_en = spacy.load("en_core_web_sm")
+nlp_wikidata_en.add_pipe("entityfishing")
+nlp_wikidata_it = spacy.load("it_core_news_sm")
+nlp_wikidata_it.add_pipe("entityfishing", config={"language": "it"})
 
 # Lire le fichier XML
 with open("Perseus_text_1999.02.0138.xml", "r", encoding="utf-8") as file:
@@ -17,7 +25,7 @@ delay_duration = 60
 
 
 # Fonction pour ajouter des balises <note> aux entités
-def annotate_entities(paragraphs, lang):
+def annotate_dbpedia(paragraphs,nlp, lang):
     global total_requests
     for paragraph in paragraphs:
         if paragraph.text:
@@ -48,13 +56,57 @@ def annotate_entities(paragraphs, lang):
                 print(f"Erreur lors du traitement de l'API pour le paragraphe : {paragraph.text[:30]}... Erreur : {e}")
 
 
-# Annoter les paragraphes en anglais
-annotate_entities(soup.find_all("p", {"lang": "en"}), "en")
+def annotate_wikidata(paragraphs, nlp, lang):
+    global total_requests
+    for paragraph in paragraphs:
+        if paragraph.text:
+            try:
+                doc = nlp(paragraph.text)
+                for ent in doc.ents:
+                    note = soup.new_tag("note")
+                    note.string = " "
+                    note['Wikidata'] = ent.text
+                    note['Lang'] = lang
+                    note['start'] = str(ent.start_char)
+                    note['end'] = str(ent.end_char)
+                    note['lien'] = ent._.url_wikidata if hasattr(ent._, 'url_wikidata') else ''
+                    note['type'] = ent._.entity_type if hasattr(ent._, 'entity_type') else ''
+                    note['score'] = str(ent._.similarity_score) if hasattr(ent._, 'similarity_score') else ''
 
-nlp = spacy.blank('it')
-nlp.add_pipe('dbpedia_spotlight')
-# Annoter les paragraphes en italien
-annotate_entities(soup.find_all("p", {"lang": "it"}), "it")
+                    paragraph.append(note)
+
+                total_requests += 1
+                print(f"Traitement du paragraphe {total_requests}")
+                if total_requests % requests_per_delay == 0:
+                    time.sleep(delay_duration)
+
+            except Exception as e:
+                print(f"Erreur : {e}")
+
+# Charger les modèles Spacy pour DBpedia et Wikidata
+nlp_dbpedia_en = spacy.blank('en')
+nlp_dbpedia_en.add_pipe('dbpedia_spotlight')
+nlp_dbpedia_it = spacy.blank('it')
+nlp_dbpedia_it.add_pipe('dbpedia_spotlight')
+
+nlp_wikidata_en = spacy.load("en_core_web_sm")
+nlp_wikidata_en.add_pipe("entityfishing")
+nlp_wikidata_it = spacy.load("it_core_news_sm")
+nlp_wikidata_it.add_pipe("entityfishing")
+
+# Lire le fichier XML
+with open("Perseus_text_1999.02.0138.xml", "r", encoding="utf-8") as file:
+    soup = BeautifulSoup(file, "xml")
+
+total_requests = 0
+requests_per_delay = 100
+delay_duration = 60
+
+# Annoter les paragraphes avec DBpedia et Wikidata
+#annotate_dbpedia(soup.find_all("p", {"lang": "en"}), nlp_dbpedia_en, "en")
+#annotate_dbpedia(soup.find_all("p", {"lang": "it"}), nlp_dbpedia_it, "it")
+annotate_wikidata(soup.find_all("p", {"lang": "en"}), nlp_wikidata_en, "en")
+annotate_wikidata(soup.find_all("p", {"lang": "it"}), nlp_wikidata_it, "it")
 
 # Écrire les modifications dans un nouveau fichier XML
 with open("Perseus_text_1999.02.0138.xml", "w", encoding="utf-8") as file:
