@@ -2,22 +2,6 @@ import spacy
 from bs4 import BeautifulSoup
 import time
 
-# Charger les modèles Spacy avec DBpedia Spotlight
-nlp_dbpedia_en = spacy.blank('en')
-nlp_dbpedia_en.add_pipe('dbpedia_spotlight')
-nlp_dbpedia_it = spacy.blank('it')
-nlp_dbpedia_it.add_pipe('dbpedia_spotlight')
-
-# Charger les modèles Spacy avec WikiData Spotlight
-nlp_wikidata_en = spacy.load("en_core_web_sm")
-nlp_wikidata_en.add_pipe("entityfishing")
-nlp_wikidata_it = spacy.load("it_core_news_sm")
-nlp_wikidata_it.add_pipe("entityfishing", config={"language": "it"})
-
-# Lire le fichier XML
-with open("Perseus_text_1999.02.0138.xml", "r", encoding="utf-8") as file:
-    soup = BeautifulSoup(file, "xml")
-
 # Initialisation des variables de contrôle de requête
 total_requests = 0
 requests_per_delay = 100
@@ -95,11 +79,11 @@ nlp_wikidata_it = spacy.load("it_core_news_sm")
 nlp_wikidata_it.add_pipe("entityfishing")
 
 # Lire le fichier XML
-with open("Perseus_text_1999.02.0138.xml", "r", encoding="utf-8") as file:
+with open("phi0978.phi001.perseus-lat2.xml", "r", encoding="utf-8") as file:
     soup = BeautifulSoup(file, "xml")
 
 total_requests = 0
-requests_per_delay = 100
+requests_per_delay = 150
 delay_duration = 60
 
 # Annoter les paragraphes avec DBpedia et Wikidata
@@ -109,5 +93,5 @@ annotate_wikidata(soup.find_all("p", {"lang": "en"}), nlp_wikidata_en, "en")
 annotate_wikidata(soup.find_all("p", {"lang": "it"}), nlp_wikidata_it, "it")
 
 # Écrire les modifications dans un nouveau fichier XML
-with open("Perseus_text_1999.02.0138.xml", "w", encoding="utf-8") as file:
+with open("phi0978.phi001.perseus-lat2.xml", "w", encoding="utf-8") as file:
     file.write(str(soup))
