@@ -54,9 +54,8 @@ def annotate_wikidata(paragraphs, nlp, lang):
                     note['start'] = str(ent.start_char)
                     note['end'] = str(ent.end_char)
                     note['label'] = ent.label_
-                    note['lien'] = ent._.url_wikidata if hasattr(ent._, 'url_wikidata') else ''
-                    note['score'] = str(ent._.nerd_score) if hasattr(ent._, 'nerd_score') else ''
-
+                    note['lien'] = ent._.url_wikidata if hasattr(ent._, 'url_wikidata') else " "
+                    note['nerd_score'] = ent._.nerd_score if hasattr(ent._, 'nerd_score') else " "
                     paragraph.append(note)
 
                 total_requests += 1
